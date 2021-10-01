@@ -11,7 +11,7 @@ namespace Assignment4
         static void Main(string[] args)
         {
             var configuration = LoadConfiguration();
-            var connectionString = configuration.GetConnectionString("Kanban");
+            var connectionString = configuration.GetConnectionString("Futurama");
 
             var optionsBuilder = new DbContextOptionsBuilder<KanbanContext>().UseSqlServer(connectionString);
             using var context = new KanbanContext(optionsBuilder.Options);
