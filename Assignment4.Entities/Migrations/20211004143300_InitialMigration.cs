@@ -7,6 +7,18 @@ namespace Assignment4.Entities.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "Tag",
+                columns: table => new
+                {
+                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tag", x => x.Name);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "User",
                 columns: table => new
                 {
@@ -42,40 +54,33 @@ namespace Assignment4.Entities.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tag",
+                name: "TagTask",
                 columns: table => new
                 {
-                    Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Id = table.Column<int>(type: "int", nullable: false),
-                    TagName = table.Column<string>(type: "nvarchar(50)", nullable: true),
-                    TaskId = table.Column<int>(type: "int", nullable: true)
+                    TagsName = table.Column<string>(type: "nvarchar(50)", nullable: false),
+                    TasksId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tag", x => x.Name);
+                    table.PrimaryKey("PK_TagTask", x => new { x.TagsName, x.TasksId });
                     table.ForeignKey(
-                        name: "FK_Tag_Tag_TagName",
-                        column: x => x.TagName,
+                        name: "FK_TagTask_Tag_TagsName",
+                        column: x => x.TagsName,
                         principalTable: "Tag",
                         principalColumn: "Name",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Tag_Task_TaskId",
-                        column: x => x.TaskId,
+                        name: "FK_TagTask_Task_TasksId",
+                        column: x => x.TasksId,
                         principalTable: "Task",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Tag_TagName",
-                table: "Tag",
-                column: "TagName");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tag_TaskId",
-                table: "Tag",
-                column: "TaskId");
+                name: "IX_TagTask_TasksId",
+                table: "TagTask",
+                column: "TasksId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Task_AssignedToEmail",
@@ -85,6 +90,9 @@ namespace Assignment4.Entities.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "TagTask");
+
             migrationBuilder.DropTable(
                 name: "Tag");
 

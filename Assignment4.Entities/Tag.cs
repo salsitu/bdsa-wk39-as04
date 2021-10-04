@@ -5,13 +5,18 @@ namespace Assignment4.Entities
 {
     public class Tag
     {
-        public int Id{get; set; }
+        public Tag(string name)
+        {
+            Name = name;
+        }
+
+        public int Id { get; set; }
 
         [Required]
         [Key]
         [StringLength(50)]
-        public string Name{get; set;}
+        public string Name { get; set; }
 
-        public ICollection<Tag> tags{get; set;}
+        public ICollection<Task> Tasks { get; set; }
     }
 }

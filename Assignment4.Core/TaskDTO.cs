@@ -2,13 +2,13 @@ using System.Collections.Generic;
 
 namespace Assignment4.Core
 {
-    public record TaskDTO
+    public record TaskDTO(int Id, string Title, string Description, int? AssignedTo, IReadOnlyCollection<string> Tags, State State)
     {
-        public int Id { get; init; }
-        public string Title { get; init; }
-        public string Description { get; init; }
-        public int? AssignedToId { get; init; }
-        public IReadOnlyCollection<string> Tags { get; init; }
-        public State State { get; init; }
+        public int Id { get; init; } = Id;
+        public string Title { get; init; } = Title;
+        public string Description { get; init; } = Description;
+        public int? AssignedToId { get; init; } = AssignedTo;
+        public IReadOnlyCollection<string> Tags { get; init; } = Tags;
+        public State State { get; init; } = State;
     }
 }
