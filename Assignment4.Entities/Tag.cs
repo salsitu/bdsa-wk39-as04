@@ -5,10 +5,6 @@ namespace Assignment4.Entities
 {
     public class Tag
     {
-        public Tag(string name)
-        {
-            Name = name;
-        }
 
         public int Id { get; set; }
 

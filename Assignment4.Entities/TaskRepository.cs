@@ -12,23 +12,35 @@ namespace Assignment4.Entities
 
         public IReadOnlyCollection<TaskDTO> All()
         {
-            return kanbanContext.Tasks.Select<Task, TaskDTO>(x => new(
-                x.Id,
-                x.Title,
-                x.Description,
-                x.AssignedTo.Id,
-                x.Tags.Select(y => y.ToString()).ToImmutableList<string>(),
-                x.State
-            )).ToImmutableList<TaskDTO>();
+            return kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                AssignedToId = x.AssignedTo.Id,
+                Tags = x.Tags.Select(y => y.ToString()).ToImmutableList<string>(),
+                State = x.State
+            }).ToImmutableList<TaskDTO>();
         }
 
         public int Create(TaskDTO task)
         {
             var tagList = new List<Tag>();
-            tagList = task.Tags.Select(x => new Tag(x)).ToList();
-            var taskConvert = new Task(task.Id, task.Title,
-                kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId),
-                task.Description, task.State, tagList);
+            tagList = task.Tags.Select(x => new Tag
+            {
+                Id = kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
+                Name = x,
+                Tasks = kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
+            }).ToList();
+            var taskConvert = new Task
+            {
+                Id = task.Id,
+                Title = task.Title,
+                AssignedTo = kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId),
+                Description = task.Description,
+                State = task.State,
+                Tags = tagList
+            };
             kanbanContext.Tasks.Add(taskConvert);
             kanbanContext.SaveChanges();
             return task.Id;
@@ -48,13 +60,26 @@ namespace Assignment4.Entities
 
         public TaskDetailsDTO FindById(int id)
         {
-            return null;
+            var task = kanbanContext.Tasks.SingleOrDefault(x => x.Id == id);
+            var user = kanbanContext.Users.SingleOrDefault(x => x.Tasks.Contains(task));
+            return new TaskDetailsDTO
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                AssignedToId = user.Id,
+                AssignedToName = user.Name,
+                AssignedToEmail = user.Email,
+                Tags = task.Tags.Select(x => x.Name),
+                State = task.State
+            };
         }
 
         public void Update(TaskDTO task)
         {
-            //update
-            kanbanContext.SaveChanges();
+            var t = kanbanContext.Tasks.SingleOrDefault(x => task.Id == x.Id);
+            if (t != null) Delete(t.Id);
+            Create(task);
         }
     }
 }

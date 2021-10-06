@@ -7,15 +7,7 @@ namespace Assignment4.Entities
 {
     public class Task
     {
-        public Task(int id, string title, User? assignedTo, string? description, State state, IReadOnlyCollection<Tag> tags)
-        {
-            Id = id;
-            Title = title;
-            AssignedTo = assignedTo;
-            Description = description;
-            State = state;
-            Tags = (ICollection<Tag>)tags;
-        }
+        
         public int Id { get; set; }
 
         [Required]
