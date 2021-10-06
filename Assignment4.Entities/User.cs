@@ -5,6 +5,7 @@ namespace Assignment4.Entities
 {
     public class User
     {
+        [Key]
         public int Id { get; set; }
 
         [Required]
@@ -12,7 +13,6 @@ namespace Assignment4.Entities
         public string Name { get; set;}
 
         [EmailAddress]
-        [Key]
         [StringLength(100)]
         public string Email { get; set;}
 
