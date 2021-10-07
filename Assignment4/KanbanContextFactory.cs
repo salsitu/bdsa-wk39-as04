@@ -3,6 +3,7 @@ using System.IO;
 using Assignment4.Core;
 using static Assignment4.Core.State;
 using Assignment4.Entities;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -57,7 +58,6 @@ namespace Assignment4
                 Description = "Test the KanbanContext's methods",
                 State = State.Active,
             };
-
             var tagImportant = new Tag
             {
                 Name = "Important",
@@ -73,14 +73,14 @@ namespace Assignment4
             task1.Tags = new[] { tagRedundant };
             task2.Tags = new[] { tagImportant };
             task3.Tags = new[] { tagImportant };
-
+            
             context.Users.AddRange(
-                new User { Name = "user1", Email = "u1@email.com", Tasks = new[] { task1 } },
-                new User { Name = "user2", Email = "u2@email.com", Tasks = new[] { task1, task2 } },
-                new User { Name = "user3", Email = "u3@email.com", Tasks = new[] { task3 } },
-                new User { Name = "user4", Email = "u4@email.com", Tasks = new[] { task1, task2, task3 } }
+                new User { Name = "user1", Email = "u1@email.com", Tasks = new List<Task>() { task1 } },
+                new User { Name = "user2", Email = "u2@email.com", Tasks = new List<Task>() { task1, task2 } },
+                new User { Name = "user3", Email = "u3@email.com", Tasks = new List<Task>() { task3 } },
+                new User { Name = "user4", Email = "u4@email.com", Tasks = new List<Task>() { task1, task2, task3 } }
             );
-
+            
             context.SaveChanges();
         }
     }
