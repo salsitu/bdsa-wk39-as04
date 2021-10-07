@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Assignment4.Core;
+using System;
 
 namespace Assignment4.Entities
 {
@@ -19,10 +20,14 @@ namespace Assignment4.Entities
 
         public string? Description { get; set; }
 
+        public DateTime Created { get; set; }
+
         [Required]
         public State State { get; set; }
 
         #nullable disable
         public ICollection<Tag> Tags { get; set; }
+
+        public DateTime StateUpdated { get; set; }
     }
 }

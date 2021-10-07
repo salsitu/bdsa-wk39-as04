@@ -3,83 +3,143 @@ using System.Collections.Immutable;
 using Assignment4.Core;
 using System.Linq;
 using System.Data.SqlClient;
+using System;
 
 namespace Assignment4.Entities
 {
     public class TaskRepository : ITaskRepository
     {
-        private KanbanContext kanbanContext;
+        private KanbanContext _kanbanContext;
 
-        public IReadOnlyCollection<TaskDTO> All()
+        public TaskRepository(KanbanContext kanbanContext)
         {
-            return kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO
-            {
-                Id = x.Id,
-                Title = x.Title,
-                Description = x.Description,
-                AssignedToId = x.AssignedTo.Id,
-                Tags = x.Tags.Select(y => y.ToString()).ToImmutableList<string>(),
-                State = x.State
-            }).ToImmutableList<TaskDTO>();
+            _kanbanContext = kanbanContext;
         }
 
-        public int Create(TaskDTO task)
+        public (Response Response, int TaskId) Create(TaskCreateDTO task)
         {
-            var tagList = new List<Tag>();
-            tagList = task.Tags.Select(x => new Tag
+            _kanbanContext.Tasks.Add(
+                new Task
+                {
+                    Title = task.Title,
+                    AssignedTo = _kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId),
+                    Description = task.Description,
+                    Created = DateTime.Now,
+                    State = State.New,
+                    Tags = task.Tags.Select(x => new Tag
+                    {
+                        Id = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
+                        Name = x,
+                        Tasks = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
+                    }).ToList(),
+                    StateUpdated = DateTime.Now
+                }
+            );
+
+            _kanbanContext.SaveChanges();
+            return (Response.Created, _kanbanContext.Tasks.Last().Id);
+        }
+
+        public Response Delete(int taskId)
+        {
+            var task = _kanbanContext.Tasks.SingleOrDefault(x => x.Id.Equals(taskId));
+            if (task == null) return Response.NotFound;
+            if (task.State == State.Removed || task.State == State.Closed || task.State == State.Removed) return Response.Conflict;
+            if (task.State == State.Active) task.State = State.Removed;
+
+            if (task.State == State.New)
             {
-                Id = kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
+                _kanbanContext.Tasks.Remove(task);
+                _kanbanContext.SaveChanges();
+            }
+
+            return Response.Deleted;
+        }
+
+        public TaskDetailsDTO Read(int taskId)
+        {
+            var task = _kanbanContext.Tasks.SingleOrDefault(x => x.Id.Equals(taskId));
+            return new TaskDetailsDTO(task.Id, task.Title, task.Description, task.Created, task.AssignedTo.Name, (IReadOnlyCollection<string>)task.Tags.Select(x => x.Name), task.State, task.StateUpdated);
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAll()
+        {
+            return _kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO(
+                x.Id,
+                x.Title,
+                x.AssignedTo.Name,
+                x.Tags.Select(y => y.Name).ToImmutableList<string>(),
+                x.State
+            )).ToImmutableList<TaskDTO>();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
+        {
+            return _kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO(
+                x.Id,
+                x.Title,
+                x.AssignedTo.Name,
+                x.Tags.Select(y => y.Name).ToImmutableList<string>(),
+                x.State
+            )).Where(x => x.State == state).ToImmutableList<TaskDTO>();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
+        {
+            return _kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO(
+                x.Id,
+                x.Title,
+                x.AssignedTo.Name,
+                x.Tags.Select(y => y.Name).ToImmutableList<string>(),
+                x.State
+            )).Where(x => x.Tags.Contains(tag)).ToImmutableList<TaskDTO>();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
+        {
+            return _kanbanContext.Tasks.Where(x => x.AssignedTo.Id == userId).Select<Task, TaskDTO>(x => new TaskDTO(
+                x.Id,
+                x.Title,
+                x.AssignedTo.Name,
+                x.Tags.Select(y => y.Name).ToImmutableList<string>(),
+                x.State
+            )).ToImmutableList<TaskDTO>();
+        }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
+        {
+            return _kanbanContext.Tasks.Where(x => x.State == State.Removed).Select<Task, TaskDTO>(x => new TaskDTO(
+                x.Id,
+                x.Title,
+                x.AssignedTo.Name,
+                x.Tags.Select(y => y.Name).ToImmutableList<string>(),
+                x.State
+            )).ToImmutableList<TaskDTO>();
+        }
+
+        public Response Update(TaskUpdateDTO task)
+        {
+            var t = _kanbanContext.Tasks.SingleOrDefault(x => x.Id == task.Id);
+            t.Id = task.Id;
+            t.Title = task.Title;
+            t.AssignedTo = _kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId);
+            t.Description = task.Description;
+            if (t.State != task.State)
+            {
+                t.State = task.State;
+                t.StateUpdated = DateTime.Now;
+            }
+
+            t.Tags = task.Tags.Select(x => new Tag
+            {
+                Id = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
                 Name = x,
-                Tasks = kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
+                Tasks = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
             }).ToList();
-            var taskConvert = new Task
-            {
-                Id = task.Id,
-                Title = task.Title,
-                AssignedTo = kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId),
-                Description = task.Description,
-                State = task.State,
-                Tags = tagList
-            };
-            kanbanContext.Tasks.Add(taskConvert);
-            kanbanContext.SaveChanges();
-            return task.Id;
-        }
 
-        public void Delete(int taskId)
-        {
-            var task = kanbanContext.Tasks.SingleOrDefault(x => x.Id.Equals(taskId));
-            kanbanContext.Tasks.Remove(task);
-            kanbanContext.SaveChanges();
-        }
+            _kanbanContext.SaveChanges();
 
-        public void Dispose()
-        {
-            kanbanContext.Dispose();
-        }
-
-        public TaskDetailsDTO FindById(int id)
-        {
-            var task = kanbanContext.Tasks.SingleOrDefault(x => x.Id == id);
-            var user = kanbanContext.Users.SingleOrDefault(x => x.Tasks.Contains(task));
-            return new TaskDetailsDTO
-            {
-                Id = task.Id,
-                Title = task.Title,
-                Description = task.Description,
-                AssignedToId = user.Id,
-                AssignedToName = user.Name,
-                AssignedToEmail = user.Email,
-                Tags = task.Tags.Select(x => x.Name),
-                State = task.State
-            };
-        }
-
-        public void Update(TaskDTO task)
-        {
-            var t = kanbanContext.Tasks.SingleOrDefault(x => task.Id == x.Id);
-            if (t != null) Delete(t.Id);
-            Create(task);
+            return Response.Updated;
         }
     }
 }
