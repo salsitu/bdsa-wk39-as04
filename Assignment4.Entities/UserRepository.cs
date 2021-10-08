@@ -14,7 +14,7 @@ namespace Assignment4.Entities
 
         public (Response Response, int UserId) Create(UserCreateDTO user)
         {
-            _kanbanContext.Add(new User);
+            _kanbanContext.Add(new User());
             throw new System.NotImplementedException();
         }
 

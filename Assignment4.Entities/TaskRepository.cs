@@ -17,26 +17,23 @@ namespace Assignment4.Entities
 
         public (Response Response, int TaskId) Create(TaskCreateDTO task)
         {
-            _kanbanContext.Tasks.Add(
-                new Task
-                {
-                    Title = task.Title,
-                    AssignedTo = _kanbanContext.Users.FirstOrDefault(x => x.Id == task.AssignedToId),
-                    Description = task.Description,
-                    Created = DateTime.Now,
-                    State = State.New,
-                    Tags = task.Tags.Select(x => new Tag
-                    {
-                        Id = _kanbanContext.Tags.FirstOrDefault(y => y.Name == x).Id,
-                        Name = x,
-                        Tasks = _kanbanContext.Tags.FirstOrDefault(y => y.Name == x).Tasks
-                    }).ToList(),
-                    StateUpdated = DateTime.Now
-                }
-            );
+            if (GetUser(task.AssignedToId) == null) return (Response.BadRequest, 0);
 
+            var entity = new Task
+            {
+                Title = task.Title,
+                AssignedTo = GetUser(task.AssignedToId),
+                Description = task.Description,
+                Created = DateTime.UtcNow,
+                State = State.New,
+                Tags = GetTags(task.Tags).ToList(),
+                StateUpdated = DateTime.UtcNow
+            };
+
+            _kanbanContext.Tasks.Add(entity);
             _kanbanContext.SaveChanges();
-            return (Response.Created, _kanbanContext.Tasks.Last().Id);
+
+            return (Response.Created, entity.Id);
         }
 
         public Response Delete(int taskId)
@@ -70,7 +67,7 @@ namespace Assignment4.Entities
                 x.AssignedTo.Name,
                 x.Tags.Select(y => y.Name).ToImmutableList<string>(),
                 x.State
-            )).ToImmutableList<TaskDTO>();
+            )).ToList().AsReadOnly();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
@@ -120,17 +117,23 @@ namespace Assignment4.Entities
         public Response Update(TaskUpdateDTO task)
         {
             var t = _kanbanContext.Tasks.FirstOrDefault(x => x.Id == task.Id);
-            
+            var user = GetUser(task.AssignedToId);
+
             if (t == null) return Response.NotFound;
+            if (t.AssignedTo == null) return Response.BadRequest;
 
             t.Title = task.Title;
-            t.AssignedTo = _kanbanContext.Users.FirstOrDefault(x => x.Id == task.AssignedToId);
+
+            t.AssignedTo = user;
+
             t.Description = task.Description;
+
             if (t.State != task.State)
             {
                 t.State = task.State;
-                t.StateUpdated = DateTime.Now;
+                t.StateUpdated = DateTime.UtcNow;
             }
+
             t.Tags = GetTags(task.Tags).ToList();
 
             _kanbanContext.SaveChanges();
@@ -142,10 +145,15 @@ namespace Assignment4.Entities
         {
             var existing = _kanbanContext.Tags.Where(x => tags.Contains(x.Name)).ToDictionary(x => x.Name);
 
-            foreach(var tag in tags)
+            foreach (var tag in tags)
             {
                 yield return existing.TryGetValue(tag, out var x) ? x : new Tag { Name = tag };
             }
+        }
+
+        private User GetUser(int? id)
+        {
+            return _kanbanContext.Users.FirstOrDefault(u => u.Id == id);
         }
     }
 }
