@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using Assignment4.Core;
 using System.Linq;
-using System.Data.SqlClient;
 using System;
 
 namespace Assignment4.Entities
@@ -22,15 +21,15 @@ namespace Assignment4.Entities
                 new Task
                 {
                     Title = task.Title,
-                    AssignedTo = _kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId),
+                    AssignedTo = _kanbanContext.Users.FirstOrDefault(x => x.Id == task.AssignedToId),
                     Description = task.Description,
                     Created = DateTime.Now,
                     State = State.New,
                     Tags = task.Tags.Select(x => new Tag
                     {
-                        Id = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
+                        Id = _kanbanContext.Tags.FirstOrDefault(y => y.Name == x).Id,
                         Name = x,
-                        Tasks = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
+                        Tasks = _kanbanContext.Tags.FirstOrDefault(y => y.Name == x).Tasks
                     }).ToList(),
                     StateUpdated = DateTime.Now
                 }
@@ -42,7 +41,7 @@ namespace Assignment4.Entities
 
         public Response Delete(int taskId)
         {
-            var task = _kanbanContext.Tasks.SingleOrDefault(x => x.Id.Equals(taskId));
+            var task = _kanbanContext.Tasks.FirstOrDefault(x => x.Id == taskId);
             if (task == null) return Response.NotFound;
             if (task.State == State.Removed || task.State == State.Closed || task.State == State.Removed) return Response.Conflict;
             if (task.State == State.Active) task.State = State.Removed;
@@ -50,15 +49,16 @@ namespace Assignment4.Entities
             if (task.State == State.New)
             {
                 _kanbanContext.Tasks.Remove(task);
-                _kanbanContext.SaveChanges();
             }
+
+            _kanbanContext.SaveChanges();
 
             return Response.Deleted;
         }
 
         public TaskDetailsDTO Read(int taskId)
         {
-            var task = _kanbanContext.Tasks.SingleOrDefault(x => x.Id.Equals(taskId));
+            var task = _kanbanContext.Tasks.FirstOrDefault(x => x.Id.Equals(taskId));
             return new TaskDetailsDTO(task.Id, task.Title, task.Description, task.Created, task.AssignedTo.Name, (IReadOnlyCollection<string>)task.Tags.Select(x => x.Name), task.State, task.StateUpdated);
         }
 
@@ -119,27 +119,33 @@ namespace Assignment4.Entities
 
         public Response Update(TaskUpdateDTO task)
         {
-            var t = _kanbanContext.Tasks.SingleOrDefault(x => x.Id == task.Id);
-            t.Id = task.Id;
+            var t = _kanbanContext.Tasks.FirstOrDefault(x => x.Id == task.Id);
+            
+            if (t == null) return Response.NotFound;
+
             t.Title = task.Title;
-            t.AssignedTo = _kanbanContext.Users.SingleOrDefault(x => x.Id == task.AssignedToId);
+            t.AssignedTo = _kanbanContext.Users.FirstOrDefault(x => x.Id == task.AssignedToId);
             t.Description = task.Description;
             if (t.State != task.State)
             {
                 t.State = task.State;
                 t.StateUpdated = DateTime.Now;
             }
-
-            t.Tags = task.Tags.Select(x => new Tag
-            {
-                Id = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Id,
-                Name = x,
-                Tasks = _kanbanContext.Tags.SingleOrDefault(y => y.Name == x).Tasks
-            }).ToList();
+            t.Tags = GetTags(task.Tags).ToList();
 
             _kanbanContext.SaveChanges();
 
             return Response.Updated;
+        }
+
+        private IEnumerable<Tag> GetTags(IEnumerable<string> tags)
+        {
+            var existing = _kanbanContext.Tags.Where(x => tags.Contains(x.Name)).ToDictionary(x => x.Name);
+
+            foreach(var tag in tags)
+            {
+                yield return existing.TryGetValue(tag, out var x) ? x : new Tag { Name = tag };
+            }
         }
     }
 }
