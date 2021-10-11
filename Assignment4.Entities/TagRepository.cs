@@ -16,43 +16,50 @@ namespace Assignment4.Entities
 
         public (Response Response, int TagId) Create(TagCreateDTO tag)
         {
-            _kanbanContext.Tags.Add(new Tag
-            {
-                Name = tag.Name
-            });
+            var entity = new Tag { Name = tag.Name };
+            _kanbanContext.Tags.Add(entity);
             _kanbanContext.SaveChanges();
-            return (Response.Created, _kanbanContext.Tags.Last().Id);
+            return (Response.Created, entity.Id);
         }
 
         public Response Delete(int tagId, bool force = false)
         {
             var tag = _kanbanContext.Tags.SingleOrDefault(x => x.Id == tagId);
-            if (tag.Tasks.Count > 0 && force)
+
+            if (tag.Tasks.Count > 0)
+            {
+                if (force) _kanbanContext.Tags.Remove(tag);
+                else return Response.Conflict;
+            }
+            else
             {
                 _kanbanContext.Tags.Remove(tag);
-            } 
-            else return Response.Conflict;
+            }
 
             _kanbanContext.SaveChanges();
-
             return Response.Deleted;
         }
 
         public TagDTO Read(int tagId)
         {
             var tag = _kanbanContext.Tags.SingleOrDefault(x => x.Id == tagId);
-            return new TagDTO(tag.Id, tag.Name);
+            return tag == null ? null : new TagDTO(tag.Id, tag.Name);
         }
 
         public IReadOnlyCollection<TagDTO> ReadAll()
         {
-            return _kanbanContext.Tags.Select(x => new TagDTO(x.Id,x.Name)).ToImmutableList();
+            return _kanbanContext.Tags.Select(x => new TagDTO(x.Id, x.Name)).ToImmutableList();
         }
 
         public Response Update(TagUpdateDTO tag)
         {
-            
-            throw new System.NotImplementedException();
+            var t = _kanbanContext.Tags.FirstOrDefault(x => x.Id == tag.Id);
+            if (t == null) return Response.NotFound;
+
+            t.Name = tag.Name;
+
+            _kanbanContext.SaveChanges();
+            return Response.Updated;
         }
     }
 }

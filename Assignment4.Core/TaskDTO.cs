@@ -8,7 +8,7 @@ namespace Assignment4.Core
     public record TaskDTO(int Id, string Title, string AssignedToName, IReadOnlyCollection<string> Tags, State State)
     {
         public virtual bool Equals(TaskDTO t)
-        {   
+        {
             return (
                 Id.Equals(t.Id) &&
                 Title.Equals(t.Title) &&

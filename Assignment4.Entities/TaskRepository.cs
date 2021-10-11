@@ -40,7 +40,7 @@ namespace Assignment4.Entities
         {
             var task = _kanbanContext.Tasks.FirstOrDefault(x => x.Id == taskId);
             if (task == null) return Response.NotFound;
-            if (task.State == State.Removed || task.State == State.Closed || task.State == State.Removed) return Response.Conflict;
+            if (task.State == State.Resolved || task.State == State.Closed || task.State == State.Removed) return Response.Conflict;
             if (task.State == State.Active) task.State = State.Removed;
 
             if (task.State == State.New)
@@ -56,7 +56,7 @@ namespace Assignment4.Entities
         public TaskDetailsDTO Read(int taskId)
         {
             var task = _kanbanContext.Tasks.FirstOrDefault(x => x.Id.Equals(taskId));
-            return new TaskDetailsDTO(task.Id, task.Title, task.Description, task.Created, task.AssignedTo.Name, (IReadOnlyCollection<string>)task.Tags.Select(x => x.Name), task.State, task.StateUpdated);
+            return task == null ? null : new TaskDetailsDTO(task.Id, task.Title, task.Description, task.Created, task.AssignedTo.Name, task.Tags.Select(x => x.Name).ToImmutableList(), task.State, task.StateUpdated);
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAll()
@@ -72,24 +72,24 @@ namespace Assignment4.Entities
 
         public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
         {
-            return _kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO(
+            return _kanbanContext.Tasks.Where(x => x.State == state).Select<Task, TaskDTO>(x => new TaskDTO(
                 x.Id,
                 x.Title,
                 x.AssignedTo.Name,
                 x.Tags.Select(y => y.Name).ToImmutableList<string>(),
                 x.State
-            )).Where(x => x.State == state).ToImmutableList<TaskDTO>();
+            )).ToImmutableList<TaskDTO>();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
         {
-            return _kanbanContext.Tasks.Select<Task, TaskDTO>(x => new TaskDTO(
+            return _kanbanContext.Tasks.Where(x => x.Tags.Select(y => y.Name).Contains(tag)).Select<Task, TaskDTO>(x => new TaskDTO(
                 x.Id,
                 x.Title,
                 x.AssignedTo.Name,
                 x.Tags.Select(y => y.Name).ToImmutableList<string>(),
                 x.State
-            )).Where(x => x.Tags.Contains(tag)).ToImmutableList<TaskDTO>();
+            )).ToImmutableList<TaskDTO>();
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
@@ -120,7 +120,7 @@ namespace Assignment4.Entities
             var user = GetUser(task.AssignedToId);
 
             if (t == null) return Response.NotFound;
-            if (t.AssignedTo == null) return Response.BadRequest;
+            if (user == null) return Response.BadRequest;
 
             t.Title = task.Title;
 
