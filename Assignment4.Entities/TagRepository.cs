@@ -17,6 +17,7 @@ namespace Assignment4.Entities
         public (Response Response, int TagId) Create(TagCreateDTO tag)
         {
             var entity = new Tag { Name = tag.Name };
+            if (_kanbanContext.Tags.SingleOrDefault(x => x.Name == entity.Name) != null) return (Response.Conflict,0);
             _kanbanContext.Tags.Add(entity);
             _kanbanContext.SaveChanges();
             return (Response.Created, entity.Id);
@@ -25,8 +26,9 @@ namespace Assignment4.Entities
         public Response Delete(int tagId, bool force = false)
         {
             var tag = _kanbanContext.Tags.SingleOrDefault(x => x.Id == tagId);
+            if (tag == null) return Response.NotFound;
 
-            if (tag.Tasks.Count > 0)
+            if (tag.Tasks != null && tag.Tasks.Count > 0)
             {
                 if (force) _kanbanContext.Tags.Remove(tag);
                 else return Response.Conflict;
